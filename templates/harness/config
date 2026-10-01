@@ -1,0 +1,24 @@
+# ctx-agent harness config. KEY=value, never executed as a script.
+# Sensors: sensor.<tier>.<name>=<shell command>   ({file} = edited file, edit tier)
+#   edit  : after every edit, per file, must take < ~2s       (computational, feedback)
+#   fast  : before the agent finishes a turn / pre-commit      (keep quality left)
+#   slow  : post-integration / CI only (mutation, e2e, perf)
+#   drift : continuous health (dead code, deps, coverage quality)
+# hint.<name>=<instruction appended to failures -> positive prompt injection>
+
+{{SENSORS}}
+
+# Token budgets (approx tokens = chars/4)
+budget.map=1200
+budget.module=800
+budget.state=400
+budget.always_loaded=1800
+
+# Stop gate: block | warn | off ; ask for sync after N changed files
+gate.stop=block
+gate.sync_threshold=5
+
+# Steering loop thresholds
+steer.recurring_threshold=3
+steer.silent_threshold=30
+output.max_lines=40

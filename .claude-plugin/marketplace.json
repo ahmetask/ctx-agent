@@ -1,0 +1,16 @@
+{
+  "name": "ctx-agent",
+  "owner": {
+    "name": "ahmetask"
+  },
+  "metadata": {
+    "description": "Harness engineering plugins for coding agents."
+  },
+  "plugins": [
+    {
+      "name": "ctx-agent",
+      "source": "./",
+      "description": "Harness engineering for coding agents: lean context + tiered sensors + drift GC."
+    }
+  ]
+}

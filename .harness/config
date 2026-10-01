@@ -1,0 +1,3 @@
+sensor.edit.bashsyntax=case {file} in *.sh) bash -n {file};; esac
+sensor.fast.test=bash tests/run.sh >/dev/null || bash tests/run.sh | grep -E "✗|passed"
+hint.test=Run bash tests/run.sh and fix the failing case; do not weaken the assertion.
