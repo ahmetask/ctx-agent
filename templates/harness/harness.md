@@ -11,7 +11,8 @@
 |---|---|---|---|---|---|
 | project map | ff | I | maint | always | `AGENTS.md` |
 {{CONTROLS}}
-| context review | fb | I | maint | fast | /ctx-agent:harness-check |
+| change plan | ff | I | arch | human | harness-architect agent → `.harness/plans/active/` |
+| context review | fb | I | maint | fast | /ctx-agent:harness-check, harness-reviewer agent |
 | drift & entropy GC | fb | C+I | maint | drift | /ctx-agent:harness-gc |
 
 ## Harnessability

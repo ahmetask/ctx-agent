@@ -101,6 +101,12 @@ out=$(CLAUDE_ENV_FILE=$PWD/env "$S/session-start.sh")
 check "lists modules by 'When to read'" 'grep -q "architecture.md — adding modules" <<<"$out"' "$out"
 check "exports CTX_AGENT_ROOT" 'grep -q CTX_AGENT_ROOT env'
 check "context injection is small (<2KB)" '[ ${#out} -lt 2048 ]' "${#out}"
+check "no plans section without active plans" '! grep -q "active exec plans" <<<"$out"'
+mkdir -p .harness/plans/active .harness/plans/completed
+echo '# x' > .harness/plans/active/fix-login.md; echo '# y' > .harness/plans/completed/old.md
+out=$("$S/session-start.sh")
+check "lists active exec plans only" 'grep -q "^- .harness/plans/active/fix-login.md" <<<"$out" && ! grep -q old.md <<<"$out"' "$out"
+rm -rf .harness/plans
 cd /; d2=$(mktemp -d); cd "$d2"; git init -q
 check "uninitialized repo: one-line hint" '[ $("$S/session-start.sh" | wc -l) -eq 1 ]'
 

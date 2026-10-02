@@ -56,6 +56,7 @@ AGENTS.md                    # the map (CLAUDE.md just imports it: @AGENTS.md)
   context/architecture.md    # on-demand modules, each with "When to read:" + "covers:" paths
   context/conventions.md
   context/decisions.md
+  plans/active/<slug>.md     # exec plans for multi-session work (committed); done → plans/completed/
   .ledger .sensor-log        # local, gitignored
 ```
 
@@ -69,9 +70,21 @@ AGENTS.md                    # the map (CLAUDE.md just imports it: @AGENTS.md)
 | `/ctx-agent:harness-gc` | dead refs, stale/over-budget docs, recurring/silent/orphan sensors |
 | `/ctx-agent:harness-brief` | rough task or weak prompt → scoped, verifiable brief for a coding agent |
 | `context-harness` agent | does the above in an isolated context |
+| `harness-architect` agent | plans a change: constraints, options, small verifiable steps → `.harness/plans/active/<slug>.md` |
+| `harness-coder` agent | implements through gated lifecycle (orient → plan → test → implement → review → verify → remember → document), keeps context true via harness-sync, resumes exec plans |
+| `harness-reviewer` agent | read-only review of the diff: sensors first, then guides, decisions and the plan; ranked findings |
 | SessionStart hook | inject state + module index + drift summary |
 | PostToolUse hook | ledger the edit, run `edit` sensors, feed failures back (exit 2) |
 | Stop hook | run `fast` sensors before the turn ends; request sync after N files (`gate.stop`) |
+
+## Coding workflow
+
+`harness-architect` plans, `harness-coder` builds, `harness-reviewer` checks. The coder delegates
+to the other two when it runs as the main agent (`claude --agent ctx-agent:harness-coder`); as a
+subagent it follows their method itself. It writes context as it learns (Remember gate =
+`/harness-sync` with provenance tags), so `context-harness` stays the tool for init and gc.
+Exec-plan format and provenance tags: [`references/exec-plans.md`](references/exec-plans.md).
+Session start lists active plans so a new session resumes them.
 
 ## Config example
 
