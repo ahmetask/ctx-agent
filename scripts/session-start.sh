@@ -24,6 +24,11 @@ if [ -d "$HARNESS_DIR/context" ]; then
     echo "- .harness/context/$(basename "$f") — ${when:-no 'When to read:' line}"
   done
 fi
+plans=$(find "$HARNESS_DIR/plans/active" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort)
+if [ -n "$plans" ]; then
+  echo "## active exec plans — resume with the harness-coder agent"
+  printf '%s\n' "$plans" | head -n 5 | sed "s|^$HARNESS_DIR/|- .harness/|"
+fi
 d=$("$(dirname "$0")/drift.sh" 2>/dev/null)
 if [ -n "$d" ]; then
   echo "## harness drift ($(printf '%s\n' "$d" | wc -l | tr -d ' ') findings; fix via /ctx-agent:harness-gc when convenient)"
