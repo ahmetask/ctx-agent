@@ -22,6 +22,7 @@ Based on Birgitta Böckeler, [*Harness engineering for coding agent users*](http
 | Regulation categories | `.harness/harness.md` control matrix: maint / arch / behav |
 | Harnessability, ambient affordances | `detect-stack.sh` affordance report → harness.md |
 | Harness coherence | one control map; *orphan* detection; gc resolves guide/sensor conflicts |
+| Guides written for an LLM | `references/agent-prompts.md` checklist + `/harness-brief` task briefs (adapted from [prompt-master](https://github.com/nidhinjs/prompt-master)) |
 | Role of the human | explicit escalation list in `AGENTS.md`; behaviour-harness gaps go to the human |
 
 ## Token economy
@@ -66,6 +67,7 @@ AGENTS.md                    # the map (CLAUDE.md just imports it: @AGENTS.md)
 | `/ctx-agent:harness-sync` | update only affected context lines from the ledger; clear it |
 | `/ctx-agent:harness-check` | computational sensors, then inferential review of the diff |
 | `/ctx-agent:harness-gc` | dead refs, stale/over-budget docs, recurring/silent/orphan sensors |
+| `/ctx-agent:harness-brief` | rough task or weak prompt → scoped, verifiable brief for a coding agent |
 | `context-harness` agent | does the above in an isolated context |
 | SessionStart hook | inject state + module index + drift summary |
 | PostToolUse hook | ledger the edit, run `edit` sensors, feed failures back (exit 2) |

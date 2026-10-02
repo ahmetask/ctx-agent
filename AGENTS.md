@@ -6,6 +6,7 @@ Claude Code plugin implementing harness engineering (see `RULES.md`). Bash only,
 - `scripts/` — all logic; `lib.sh` is sourced by every script (config parsing, budgets, squeeze)
 - `hooks/hooks.json` — wires `session-start.sh`, `post-edit.sh`, `stop-gate.sh`
 - `skills/*/SKILL.md`, `agents/context-harness.md` — inferential guides; keep them short
+- `references/` — on-demand plugin docs read by skills/agent (e.g. `agent-prompts.md`)
 - `templates/` — copied into target repos by `init.sh` (`{{...}}` placeholders)
 
 ## Commands
