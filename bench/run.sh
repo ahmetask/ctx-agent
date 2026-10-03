@@ -113,15 +113,16 @@ echo "ctx-agent bench · task $(basename "$task") · arms $arms · reps $reps ·
 for rep in $(seq 1 "$reps"); do
   base="$out/work/r$rep"; mkdir -p "$base"
   if [[ ",$arms," == *",ctx"* ]]; then
-    fixture "$base/setup"
-    session "$base/setup" ctx "r$rep-setup" "/ctx-agent:harness-init $PREAMBLE"
-    ok=0; [ -f "$base/setup/AGENTS.md" ] && [ -d "$base/setup/.harness" ] && ok=1
-    commit_all "$base/setup" "harness init"
+    setup="$base/setup/$(basename "$task")"; mkdir -p "$base/setup"  # dir name = project name in AGENTS.md
+    fixture "$setup"
+    session "$setup" ctx "r$rep-setup" "/ctx-agent:harness-init $PREAMBLE"
+    ok=0; [ -f "$setup/AGENTS.md" ] && [ -d "$setup/.harness" ] && ok=1
+    commit_all "$setup" "harness init"
     record "$rep" ctx-setup 0 "$ok" "r$rep-setup"
   fi
   for arm in ${arms//,/ }; do
     wd="$base/$arm"
-    if [ "$arm" = baseline ]; then fixture "$wd"; else cp -R "$base/setup" "$wd"; fi
+    if [ "$arm" = baseline ]; then fixture "$wd"; else cp -R "$setup" "$wd"; fi
     for ph in $(seq 1 "$nphases"); do
       [ "$arm" = ctx ] && [ "$ph" -gt 1 ] && wipe_memory "$wd"
       label="r$rep-$arm-p$ph"

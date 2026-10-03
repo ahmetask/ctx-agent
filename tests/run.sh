@@ -20,6 +20,10 @@ new_repo
 out=$("$S/detect-stack.sh")
 check "detects npm lint/test" 'grep -q "sensor.fast.lint=npm run lint" <<<"$out" && grep -q "sensor.fast.test=npm run test" <<<"$out"' "$out"
 check "reports affordances" 'grep -q "tests-present:" <<<"$out"'
+d0=$(mktemp -d); printf 'test:\n\ttrue\n' > "$d0/Makefile"
+out0=$(cd "$d0" && git init -q && "$S/detect-stack.sh")
+check "make-only repo: sensor found, no 'ask the human'" 'grep -q "sensor.fast.make-test=make test" <<<"$out0" && ! grep -q "no known ecosystem" <<<"$out0"' "$out0"
+rm -rf "$d0"
 
 echo "init"
 out=$("$S/init.sh")

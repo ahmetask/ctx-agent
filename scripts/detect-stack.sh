@@ -51,7 +51,7 @@ if has pubspec.yaml; then found=1; echo "# dart"; s fast analyze "dart analyze";
 if has Package.swift; then found=1; echo "# swift"; s fast test "swift test"; fi
 if has Makefile; then
   echo "# make"
-  for t in lint check test; do has_make_target "$t" && s fast "make-$t" "make $t"; done
+  for t in lint check test; do has_make_target "$t" && { s fast "make-$t" "make $t"; found=1; }; done
 fi
 any "*.sh" && command -v shellcheck >/dev/null && s edit shellcheck "shellcheck {file}"
 [ $found -eq 0 ] && echo "# no known ecosystem markers; ask the human which commands lint/test this repo"
