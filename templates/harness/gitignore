@@ -2,3 +2,6 @@
 .sensor-log
 .fast-checked
 .drift.tmp
+.state-nudged
+checkpoint.md
+checkpoint.md.tmp

@@ -20,10 +20,11 @@
 <!-- Imperative, one line each, ideally with the WHY. Delete habit, keep load-bearing.
      A rule a tool can check belongs in a sensor, not here. -->
 
-## Ask a human when
-- requirements are ambiguous or the fix changes public behaviour/APIs
-- a sensor and a rule disagree
-- touching security, data migrations, or anything irreversible
+## Ask a human when (don't assume — protocol: ctx-agent `references/ask-human.md`)
+- requirements are ambiguous, or two readings lead to different code
+- the fix changes public behaviour/APIs, schemas or stored data formats
+- a sensor and a rule disagree, or a task contradicts a `(human)` line
+- deleting files, adding dependencies, security, data migrations, anything irreversible
 
 ## More context (read only when relevant)
 <!-- - `.harness/context/architecture.md` — when changing module boundaries -->

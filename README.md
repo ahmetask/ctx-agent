@@ -23,7 +23,7 @@ Based on Birgitta Böckeler, [*Harness engineering for coding agent users*](http
 | Harnessability, ambient affordances | `detect-stack.sh` affordance report → harness.md |
 | Harness coherence | one control map; *orphan* detection; gc resolves guide/sensor conflicts |
 | Guides written for an LLM | `references/agent-prompts.md` checklist + `/harness-brief` task briefs (adapted from [prompt-master](https://github.com/nidhinjs/prompt-master)) |
-| Role of the human | explicit escalation list in `AGENTS.md`; behaviour-harness gaps go to the human |
+| Role of the human | explicit escalation list in `AGENTS.md`; ask-don't-assume protocol (`references/ask-human.md`); behaviour-harness gaps go to the human |
 
 ## Token economy
 
@@ -36,6 +36,22 @@ Based on Birgitta Böckeler, [*Harness engineering for coding agent users*](http
 - **Isolated maintenance**: sync/gc run in the `context-harness` subagent, so the main
   conversation never reads the whole context.
 - **Incremental sync**: an edit ledger tells sync exactly what changed; it edits only the affected lines.
+- **Read guard**: whole-file Reads above `guard.read_max_tokens` (8000) are refused with a
+  "Grep, then Read with offset/limit" hint.
+- **Measured, not claimed**: `bench/` runs a 3-session job with and without the harness and
+  memory, and reports cost and tokens per phase. See [Benchmark](#benchmark).
+
+## Session memory (continue where you left off)
+
+Two files, two writers, both shown at session start:
+
+| file | written by | holds |
+|---|---|---|
+| `.harness/state.md` (committed) | the agent; the Stop hook asks once per session if code changed and it didn't | intent: focus, in progress, next, open questions |
+| `.harness/checkpoint.md` (local) | hooks: Stop, PreCompact, SessionEnd; costs no tokens to write | facts: branch/HEAD, uncommitted files, files edited since sync, failing sensors, active plan + next action |
+| `.harness/plans/active/*.md` (committed) | harness-architect / harness-coder | multi-session exec plans with gates and evidence |
+
+After `/compact`, `/clear` or a new session, the agent starts from these instead of re-reading code.
 
 ## Install
 
@@ -57,6 +73,7 @@ AGENTS.md                    # the map (CLAUDE.md just imports it: @AGENTS.md)
   context/conventions.md
   context/decisions.md
   plans/active/<slug>.md     # exec plans for multi-session work (committed); done → plans/completed/
+  checkpoint.md              # auto session memory written by hooks (local, gitignored)
   .ledger .sensor-log        # local, gitignored
 ```
 
@@ -72,14 +89,20 @@ AGENTS.md                    # the map (CLAUDE.md just imports it: @AGENTS.md)
 | `context-harness` agent | does the above in an isolated context |
 | `harness-architect` agent | plans a change: constraints, options, small verifiable steps → `.harness/plans/active/<slug>.md` |
 | `harness-coder` agent | implements through gated lifecycle (orient → plan → test → implement → review → verify → remember → document), keeps context true via harness-sync, resumes exec plans |
+| `harness-tester` agent | tests first: failing test before the fix, characterization tests, proves each test fails without the change; behaviour gaps |
 | `harness-reviewer` agent | read-only review of the diff: sensors first, then guides, decisions and the plan; ranked findings |
-| SessionStart hook | inject state + module index + drift summary |
+| SessionStart hook | inject state + checkpoint + module index + active plans + drift summary |
+| PreToolUse hook (Read) | read guard: refuse oversized whole-file reads with a Grep/offset hint |
 | PostToolUse hook | ledger the edit, run `edit` sensors, feed failures back (exit 2) |
-| Stop hook | run `fast` sensors before the turn ends; request sync after N files (`gate.stop`) |
+| Stop hook | refresh checkpoint; run `fast` sensors; request sync after N files (`gate.stop`); once per session ask for a state.md handoff (`gate.state`) |
+| PreCompact / SessionEnd hooks | refresh checkpoint so a compacted or new session can resume |
 
 ## Coding workflow
 
-`harness-architect` plans, `harness-coder` builds, `harness-reviewer` checks. The coder delegates
+`harness-architect` plans, `harness-tester` pins behaviour, `harness-coder` builds, `harness-reviewer` checks.
+All four follow the ask-don't-assume protocol: ambiguity becomes a question with a recommended
+default (AskUserQuestion when available); headless runs record it in state.md and take only
+reversible defaults. The coder delegates
 to the other two when it runs as the main agent (`claude --agent ctx-agent:harness-coder`); as a
 subagent it follows their method itself. It writes context as it learns (Remember gate =
 `/harness-sync` with provenance tags), so `context-harness` stays the tool for init and gc.
@@ -98,6 +121,15 @@ gate.stop=block
 ```
 
 Requirements: `bash`, `git`, coreutils. `jq` or `python3` optional (used for JSON when present).
+
+## Benchmark
+
+```
+bench/run.sh --reps 3            # baseline vs ctx vs ctx-mem on a 3-phase job; prints summary.md
+```
+Each phase is a fresh `claude -p` session, so phases 2–3 show what memory saves when work resumes.
+Bring any repo as a task (`repo/`, `phase<N>.md`, hidden `check<N>.sh`). Method and caveats:
+[`bench/README.md`](bench/README.md).
 
 ## Development
 

@@ -1,0 +1,106 @@
+diff --git a/inventory/cli.py b/inventory/cli.py
+index 24b12ad..7e28790 100644
+--- a/inventory/cli.py
++++ b/inventory/cli.py
+@@ -51,10 +51,49 @@ def cmd_show(store, args):
+     print(f"sku: {item.sku}")
+     print(f"name: {item.name}")
+     print(f"qty: {item.qty}")
++    print(f"reorder_level: {item.reorder_level}")
+     print(f"unit_price: {format_cents(item.unit_price_cents)}")
+     print(f"value: {format_cents(item.value_cents)}")
+ 
+ 
++def cmd_set_reorder(store, args):
++    item = store.get(args.sku)
++    level = _int(args.level)
++    if level < 0:
++        raise InvalidValue(f"reorder level must not be negative: {level}")
++    item.reorder_level = level
++    store.save()
++    print(f"{args.sku} reorder_level {level}")
++
++
++def _alerted(store):
++    items = [i for i in store.items.values() if i.reorder_level > 0 and i.qty <= i.reorder_level]
++    return sorted(items, key=lambda i: (-(i.reorder_level - i.qty), i.sku))
++
++
++def cmd_alerts(store, args):
++    rows = [(i.sku, i.name, i.qty, i.reorder_level, i.reorder_level - i.qty) for i in _alerted(store)]
++    if not rows:
++        print("no alerts")
++        return
++    print(table.render(["SKU", "NAME", "QTY", "REORDER", "SHORT"], rows,
++                       numeric={"QTY", "REORDER", "SHORT"}))
++
++
++def cmd_restock(store, args):
++    items = _alerted(store)
++    units = cost = 0
++    for i in items:
++        added = 2 * i.reorder_level - i.qty
++        units += added
++        cost += added * i.unit_price_cents
++        i.qty += added
++    verb = "would restock" if args.dry_run else "restocked"
++    if not args.dry_run:
++        store.save()
++    print(f"{verb} {len(items)} item(s), {units} unit(s), cost {format_cents(cost)}")
++
++
+ def cmd_value(store, args):
+     total = sum(i.value_cents for i in store.items.values())
+     print(f"total value: {format_cents(total)} across {len(store.items)} item(s)")
+@@ -95,6 +134,17 @@ def build_parser():
+     s.add_argument("sku")
+     s.set_defaults(func=cmd_show)
+ 
++    sr = sub.add_parser("set-reorder", help="set an item's reorder level")
++    sr.add_argument("sku")
++    sr.add_argument("level")
++    sr.set_defaults(func=cmd_set_reorder)
++
++    sub.add_parser("alerts", help="items at or below reorder level").set_defaults(func=cmd_alerts)
++
++    rs = sub.add_parser("restock", help="restock alerted items to 2x reorder level")
++    rs.add_argument("--dry-run", action="store_true")
++    rs.set_defaults(func=cmd_restock)
++
+     sub.add_parser("value", help="total stock value").set_defaults(func=cmd_value)
+ 
+     i = sub.add_parser("import", help="add items from a CSV (sku,name,qty,price)")
+diff --git a/inventory/models.py b/inventory/models.py
+index 8aab762..bf0e786 100644
+--- a/inventory/models.py
++++ b/inventory/models.py
+@@ -17,6 +17,7 @@ class Item:
+     name: str
+     qty: int
+     unit_price_cents: int
++    reorder_level: int = 0
+ 
+     def __post_init__(self):
+         if not self.sku or " " in self.sku:
+@@ -25,6 +26,7 @@ class Item:
+             raise InvalidValue("name must not be empty")
+         _non_negative_int("qty", self.qty)
+         _non_negative_int("unit_price_cents", self.unit_price_cents)
++        _non_negative_int("reorder_level", self.reorder_level)
+ 
+     @property
+     def value_cents(self):
+@@ -36,6 +38,7 @@ class Item:
+             "name": self.name,
+             "qty": self.qty,
+             "unit_price_cents": self.unit_price_cents,
++            "reorder_level": self.reorder_level,
+         }
+ 
+     @classmethod
+@@ -45,4 +48,5 @@ class Item:
+             name=d["name"],
+             qty=d["qty"],
+             unit_price_cents=d["unit_price_cents"],
++            reorder_level=d.get("reorder_level", 0),
+         )

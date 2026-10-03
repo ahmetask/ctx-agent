@@ -17,6 +17,11 @@ budget.always_loaded=1800
 # Stop gate: block | warn | off ; ask for sync after N changed files
 gate.stop=block
 gate.sync_threshold=5
+# Once per session: ask for a state.md handoff when code changed but state.md didn't (nudge | off)
+gate.state=nudge
+
+# Read guard: whole-file Reads above this many tokens are refused with a Grep/offset hint (0 = off)
+guard.read_max_tokens=8000
 
 # Steering loop thresholds
 steer.recurring_threshold=3

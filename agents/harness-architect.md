@@ -28,7 +28,8 @@ Exec-plan format and provenance tags: `${CLAUDE_PLUGIN_ROOT}/references/exec-pla
    for a bug is a failing test that reproduces it. Name the files each step touches.
 5. **Harness impact.** Which modules, decisions, AGENTS.md commands and `sensor.*` lines the change
    will make stale or need; any check that should become a sensor (RULES.md R2, R8).
-6. **Unknowns.** Questions only a human can answer, each with the default you'd take.
+6. **Unknowns.** Questions only a human can answer, each with the default you'd take. Ask them
+   per `${CLAUDE_PLUGIN_ROOT}/references/ask-human.md` before writing steps that depend on the answer.
 7. **Write the plan** at `.harness/plans/active/<slug>.md` with `approved: pending`. Check its
    lines against the harness-brief line checklist. Trivial work (one file, obvious check) gets no
    plan file: return the steps in the report instead.

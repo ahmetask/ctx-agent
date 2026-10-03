@@ -12,7 +12,10 @@
 | project map | ff | I | maint | always | `AGENTS.md` |
 {{CONTROLS}}
 | change plan | ff | I | arch | human | harness-architect agent → `.harness/plans/active/` |
+| test design | fb | I | behav | fast | harness-tester agent |
 | context review | fb | I | maint | fast | /ctx-agent:harness-check, harness-reviewer agent |
+| session memory | ff | C+I | maint | always | `.harness/state.md` (agent) + `.harness/checkpoint.md` (hooks) |
+| read guard | fb | C | maint | edit | `guard.read_max_tokens` (PreToolUse Read) |
 | drift & entropy GC | fb | C+I | maint | drift | /ctx-agent:harness-gc |
 
 ## Harnessability

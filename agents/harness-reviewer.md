@@ -24,7 +24,9 @@ Bash is for read-only commands: `git diff/log/show`, `sensors.sh`, `drift.sh`, e
    (lines not traceable to the request); overcomplication; boundary violations per architecture.md.
 5. **Harness.** Does the change make a module, AGENTS.md command or `sensor.*` line false? Is
    there an exec-plan step marked done without evidence? Run `drift.sh` for `dead-ref`/`budget`.
-6. **Steering loop.** For a finding a tool could catch, propose the sensor and its `hint.` line.
+6. **Assumptions.** Flag code that settles an ambiguity the request left open (output format,
+   error behaviour, defaults) without a recorded answer: `should-fix · ask the human`.
+7. **Steering loop.** For a finding a tool could catch, propose the sensor and its `hint.` line.
 
 ## Report (≤ 20 lines, no diffs)
 - Sensors: ✓/✗ per sensor run.

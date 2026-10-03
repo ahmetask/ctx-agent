@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SessionStart hook: inject the *minimum* context. AGENTS.md is already loaded
 # via CLAUDE.md, so we only add: current state, the module index (progressive
-# disclosure: titles, not bodies) and a one-line drift summary.
+# disclosure: titles, not bodies), the auto checkpoint and a drift summary.
 . "$(dirname "$0")/lib.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [ -n "${CLAUDE_ENV_FILE:-}" ] && echo "export CTX_AGENT_ROOT=\"$PLUGIN_ROOT\"" >> "$CLAUDE_ENV_FILE"
@@ -15,6 +15,10 @@ echo "[ctx-agent] harness active · scripts: $PLUGIN_ROOT/scripts"
 if [ -s "$HARNESS_DIR/state.md" ]; then
   echo "## state (.harness/state.md)"
   grep -v '^[[:space:]]*$' "$HARNESS_DIR/state.md" | grep -v '^<!--' | head -n 25
+fi
+if [ -s "$HARNESS_DIR/checkpoint.md" ]; then
+  echo "## last checkpoint (.harness/checkpoint.md) — verify against git before relying on it"
+  sed 1d "$HARNESS_DIR/checkpoint.md" | head -n 12
 fi
 if [ -d "$HARNESS_DIR/context" ]; then
   echo "## modules — Read only when the task touches them"

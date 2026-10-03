@@ -73,6 +73,7 @@ printf 'sensor.fast.red=exit 1\n' >> .harness/config
 out=$("$S/stop-gate.sh" <<<'{}')
 check "blocks on red fast sensors" 'grep -q "\"decision\": *\"block\"" <<<"$out"' "$out"
 sed -i '/sensor.fast.red/d' .harness/config
+touch .harness/state.md  # handoff written -> no state nudge
 out=$("$S/stop-gate.sh" <<<'{}')
 check "green + few files -> allow" '[ -z "$out" ]' "$out"
 for i in 1 2 3 4 5; do echo "src/f$i.js" >> .harness/.ledger; done
@@ -97,6 +98,7 @@ for i in 1 2 3; do printf 'x\tfast\tlint\tfail\n' >> .harness/.sensor-log; done
 check "recurring failure flagged" '"$S/drift.sh" | grep -q "recurring.*fast/lint"'
 
 echo "session start"
+rm -f .harness/checkpoint.md
 out=$(CLAUDE_ENV_FILE=$PWD/env "$S/session-start.sh")
 check "lists modules by 'When to read'" 'grep -q "architecture.md — adding modules" <<<"$out"' "$out"
 check "exports CTX_AGENT_ROOT" 'grep -q CTX_AGENT_ROOT env'
@@ -107,8 +109,77 @@ echo '# x' > .harness/plans/active/fix-login.md; echo '# y' > .harness/plans/com
 out=$("$S/session-start.sh")
 check "lists active exec plans only" 'grep -q "^- .harness/plans/active/fix-login.md" <<<"$out" && ! grep -q old.md <<<"$out"' "$out"
 rm -rf .harness/plans
+check "no checkpoint section before any checkpoint" '! grep -q "last checkpoint" <<<"$out"'
+
+echo "checkpoint (session memory)"
+mkdir -p .harness/plans/active
+printf '# Fix login\n- status: gate=implement · branch=x\n\n## Next action\nadd the retry test\n' > .harness/plans/active/fix-login.md
+echo dirty >> src/a.js; echo src/a.js > .harness/.ledger; printf 'x\tfast\ttest\tfail\n' >> .harness/.sensor-log
+"$S/checkpoint.sh" precompact </dev/null
+cp=$(cat .harness/checkpoint.md 2>/dev/null)
+check "records event, git, uncommitted, ledger" 'grep -q "precompact" <<<"$cp" && grep -q "^- git: " <<<"$cp" && grep -q "uncommitted (.*src/a.js" <<<"$cp" && grep -q "edited since sync: src/a.js" <<<"$cp"' "$cp"
+check "records failing sensors and plan next action" 'grep -q "failing sensors (last run): .*fast/test" <<<"$cp" && grep -q "gate=implement.*next: add the retry test" <<<"$cp"' "$cp"
+printf 'x\tfast\ttest\tpass\n' >> .harness/.sensor-log; "$S/checkpoint.sh" </dev/null
+check "sensor that recovered is not reported" '! grep -q "fast/test" .harness/checkpoint.md'
+out=$("$S/session-start.sh" </dev/null)
+check "session start shows checkpoint" 'grep -q "last checkpoint" <<<"$out" && grep -q "next: add the retry test" <<<"$out"' "$out"
+check "context injection still small (<2KB)" '[ ${#out} -lt 2048 ]' "${#out}"
+check "checkpoint is gitignored by template" 'grep -qx checkpoint.md "$S/../templates/harness/gitignore"'
+rm -rf .harness/plans; git checkout -q -- src/a.js
+
+echo "stop gate: state handoff nudge"
+sed -i 's/^gate.stop=off/gate.stop=block/' .harness/config; "$S/ledger.sh" clear >/dev/null
+rm -f .harness/checkpoint.md; touch -d '1 hour ago' .harness/state.md; echo src/a.js > .harness/.ledger
+out=$("$S/stop-gate.sh" <<<'{"session_id":"s1"}')
+check "code changed, state.md not -> asks for handoff" 'grep -q "state.md did not" <<<"$out"' "$out"
+check "stop gate refreshes checkpoint" '[ -f .harness/checkpoint.md ]'
+check "nudges once per session" '[ -z "$("$S/stop-gate.sh" <<<"{\"session_id\":\"s1\"}")" ]'
+check "nudges again in a new session" 'grep -q "state.md did not" <<<"$("$S/stop-gate.sh" <<<"{\"session_id\":\"s2\"}")"'
+touch .harness/state.md; rm -f .harness/.state-nudged
+check "no nudge when state.md is newer" '[ -z "$("$S/stop-gate.sh" <<<"{\"session_id\":\"s3\"}")" ]'
+touch .harness/.ledger; echo 'gate.state=off' >> .harness/config; rm -f .harness/.state-nudged
+check "gate.state=off disables nudge" '[ -z "$("$S/stop-gate.sh" <<<"{\"session_id\":\"s4\"}")" ]'
+sed -i '/^gate.state=off/d' .harness/config
+
+echo "read guard"
+head -c 40000 /dev/zero | tr '\0' 'a' > big.txt; echo small > small.txt
+err=$("$S/read-guard.sh" 2>&1 <<<"{\"tool_input\":{\"file_path\":\"$PWD/big.txt\"}}"); rc=$?
+check "large whole-file read refused with hint" '[ $rc -eq 2 ] && grep -q "offset/limit" <<<"$err"' "rc=$rc $err"
+"$S/read-guard.sh" <<<"{\"tool_input\":{\"file_path\":\"$PWD/big.txt\",\"limit\":100}}"; rc=$?
+check "ranged read allowed" '[ $rc -eq 0 ]'
+"$S/read-guard.sh" <<<"{\"tool_input\":{\"file_path\":\"$PWD/small.txt\"}}"; rc=$?
+check "small read allowed" '[ $rc -eq 0 ]'
+echo 'guard.read_max_tokens=0' >> .harness/config
+"$S/read-guard.sh" <<<"{\"tool_input\":{\"file_path\":\"$PWD/big.txt\"}}" 2>/dev/null; rc=$?
+check "guard.read_max_tokens=0 disables" '[ $rc -eq 0 ]'
+sed -i '/^guard.read_max_tokens/d' .harness/config; rm -f big.txt small.txt
+
 cd /; d2=$(mktemp -d); cd "$d2"; git init -q
 check "uninitialized repo: one-line hint" '[ $("$S/session-start.sh" | wc -l) -eq 1 ]'
+check "uninitialized repo: read guard and checkpoint are no-ops" '"$S/read-guard.sh" <<<"{}" && "$S/checkpoint.sh" </dev/null && [ ! -e .harness ]'
+
+echo "bench task checks"
+B="$S/../bench"; T="$B/tasks/inventory"
+d3=$(mktemp -d); cp -R "$T/repo" "$d3/r"
+check "checks fail on the untouched fixture" '! bash "$T/check1.sh" "$d3/r" >/dev/null 2>&1 && ! bash "$T/check2.sh" "$d3/r" >/dev/null 2>&1'
+(cd "$d3/r" && git init -q && git apply "$T/reference.patch")
+check "checks pass on the reference solution" 'for i in 1 2 3; do bash "$T/check$i.sh" "$d3/r" >/dev/null || exit 1; done'
+
+echo "bench runner (fake claude)"
+export FAKE_LOG="$d3/fake.log" FAKE_PATCH="$T/reference.patch"
+out=$(CLAUDE_BIN="$S/../tests/fake-claude.sh" "$B/run.sh" --reps 1 --out "$d3/out" 2>&1); rc=$?
+res="$d3/out/results.tsv"
+check "runner exits 0 and writes summary" '[ $rc -eq 0 ] && [ -s "$d3/out/summary.md" ]' "$out"
+check "one setup + 3 arms x 3 phases recorded" '[ $(($(wc -l < "$res") - 1)) -eq 10 ]' "$(cat "$res")"
+check "hidden checks graded (all pass)" '[ "$(awk -F"\t" "NR>1 && \$4!=1" "$res")" = "" ]' "$(cat "$res")"
+check "tokens from modelUsage" 'awk -F"\t" "\$2==\"baseline\"" "$res" | head -n1 | cut -f6-9 | grep -qx "300.200.1000.50"' "$(cat "$res")"
+check "baseline runs without plugin" 'grep "^baseline " "$FAKE_LOG" | grep -vq "plugin=yes"' "$(cat "$FAKE_LOG")"
+check "ctx arm: memory wiped between phases" '[ "$(grep "^ctx " "$FAKE_LOG" | cut -d" " -f3 | tr "\n" " ")" = "focus=none focus=none focus=none " ]' "$(cat "$FAKE_LOG")"
+check "ctx-mem arm: memory carried" '[ "$(grep "^ctx-mem " "$FAKE_LOG" | cut -d" " -f3- | tr "\n" " ")" = "focus=none focus=phase 1 focus=phase 2 " ]' "$(cat "$FAKE_LOG")"
+check "report shows delta vs baseline" 'grep -q "| ctx-mem | 3/3 | 0.3000 | -66.7% |" "$d3/out/summary.md"' "$(cat "$d3/out/summary.md")"
+check "report includes setup cost" 'grep -q "Setup (harness-init" "$d3/out/summary.md"'
+check "work dirs are separate git repos" '[ -d "$d3/out/work/r1/baseline/.git" ] && [ ! -d "$d3/out/work/r1/baseline/.harness" ]'
+rm -rf "$d3"
 
 echo; echo "passed $pass, failed $fail"
 [ $fail -eq 0 ]

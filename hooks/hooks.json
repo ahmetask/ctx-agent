@@ -3,6 +3,12 @@
     "SessionStart": [
       { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh\"", "timeout": 20 } ] }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/read-guard.sh\"", "timeout": 10 } ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
@@ -11,6 +17,12 @@
     ],
     "Stop": [
       { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/stop-gate.sh\"", "timeout": 600 } ] }
+    ],
+    "PreCompact": [
+      { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/checkpoint.sh\" precompact", "timeout": 20 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/checkpoint.sh\" end", "timeout": 20 } ] }
     ]
   }
 }

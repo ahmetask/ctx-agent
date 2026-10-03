@@ -1,6 +1,6 @@
 {
   "name": "ctx-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Repo- and language-agnostic harness engineering for coding agents: small, true, token-budgeted context (guides) plus tiered computational sensors, drift garbage-collection and a steering loop.",
   "author": {
     "name": "ahmetask"
@@ -12,6 +12,8 @@
     "agents-md",
     "token-budget",
     "sensors",
-    "drift"
+    "drift",
+    "session-memory",
+    "benchmark"
   ]
 }

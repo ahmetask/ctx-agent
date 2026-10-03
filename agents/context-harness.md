@@ -18,7 +18,8 @@ sensors (feedback checks). You work in any language and any repo layout. Follow
   `${CLAUDE_PLUGIN_ROOT}/references/agent-prompts.md` (line checklist; task-brief template for delegation).
 
 Scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/` (`$CTX_AGENT_ROOT/scripts/`):
-`init.sh`, `detect-stack.sh`, `sensors.sh <tier> [file]`, `budget.sh`, `drift.sh`, `ledger.sh show|clear`.
+`init.sh`, `detect-stack.sh`, `sensors.sh <tier> [file]`, `budget.sh`, `drift.sh`, `ledger.sh show|clear`,
+`checkpoint.sh` (hooks run it; `.harness/checkpoint.md` is mechanical memory, never edit it by hand).
 
 Work method:
 1. Read the minimum: `ledger.sh show`, `drift.sh`, `git diff --stat`, then only the files those name.

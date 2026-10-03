@@ -46,9 +46,16 @@ Agent = Model + Harness. We build the *outer* (user) harness: guides + sensors, 
   behaviour (spec as guide; tests/approved fixtures + human review as sensors). Track gaps in harness.md.
 
 ## R10 Direct the human, don't replace them
+- Ask, don't assume (`references/ask-human.md`): ≤ 3 questions with a recommended default;
+  headless → record the question, take only reversible defaults.
 - Escalate: ambiguous requirements, sensor/rule conflicts, public API or behaviour changes,
   security, irreversible operations. Correctness needs a human-specified intent.
 
 ## R11 Harnessability & coherence
 - Record ambient affordances (types, boundaries, tests, CI). Recommend the cheapest affordance
   that unlocks a new sensor. One harness map (harness.md) lists all controls; no orphans, no conflicts.
+
+## R12 Memory: intent by the agent, facts by the hooks
+- state.md = intent (focus/next/open questions), written by the agent, asked for once per session.
+- checkpoint.md = facts (git, dirty files, ledger, red sensors, plan next action), written by hooks
+  at Stop/PreCompact/SessionEnd at zero token cost. Git wins when either disagrees with it.
